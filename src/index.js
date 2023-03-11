@@ -100,7 +100,7 @@ function markupImages(items) {
 function notifications(length, totalHits) {
   if (length === 0) {
     Notiflix.Notify.failure(
-      'Sorry, there are no images matching your search query. Please try again.'
+      'Sorry, there are no images matching your search query. Please try again'
     );
     return;
   }
