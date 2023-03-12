@@ -10,116 +10,158 @@ const refs = {
   loadMoreBtn: document.querySelector('.load-more'),
 };
 
-refs.loadMoreBtn.style.display = 'none';
-
+refs.loadMoreBtn.addEventListener('click', onLoadMore);
+refs.loadMoreBtn.classList.add('is-hidden');
 refs.searchForm.addEventListener('submit', onSearch);
-let page = 1;
-function onSearch(e) {
-  e.preventDefault();
-  page = 1;
-  refs.gallery.innerHTML = '';
-  const term = refs.input.value.trim();
 
-  if (term !== '') {
-    fetchImages(term);
-  } else {
-    refs.loadMoreBtn.style.display = 'none';
+class NewApiService {
+  constructor() {
+    this.searchQuery = '';
+    this.page = 1;
+  }
 
-    return Notiflix.Notify.failure(
-      'Sorry, there are no images matching your search query. Please try again.'
-    );
+  async fetchImages() {
+    const apiKey = '34025093-cc2dd49ea388fe86622ccaf7b';
+    const BASE_URL = 'https://pixabay.com/api/';
+    const params = {
+      key: `${apiKey}`,
+      q: `${this.searchQuery}`,
+      page: `${this.page}`,
+      per_page: '40',
+      image_type: 'photo',
+      orientation: 'horizontal',
+      safesearch: 'true',
+    };
+
+    const api = await axios.get(BASE_URL, { params });
+    const data = await api.data;
+    this.incrementPage();
+    return data;
+  }
+
+  incrementPage() {
+    this.page + 1;
+    console.log(this.page);
+  }
+  resetIncrementPage() {
+    this.page = 1;
+  }
+  get query() {
+    return this.searchQuery;
+  }
+
+  set query(newQuery) {
+    this.searchQuery = newQuery;
   }
 }
-refs.loadMoreBtn.addEventListener('click', onloadMoreBtn);
-function onloadMoreBtn() {
-  const term = refs.input.value.trim();
-  page += 1;
-  fetchImages(term, page);
+
+const newApiService = new NewApiService();
+
+async function onSearch(e) {
+  clearMarkup();
+  e.preventDefault();
+  newApiService.query = e.currentTarget.elements.searchQuery.value.trim();
+  if (newApiService.searchQuery === '') {
+    Notiflix.Notify.failure(
+      'Sorry, there are no images matching your search query. Please try again.'
+    );
+    return clearMarkup();
+  }
+  await onSearchRequest();
+
+  newApiService.resetIncrementPage();
 }
 
-async function fetchImages(term, page) {
-  const BASE_URL = 'https://pixabay.com/api/';
-  const apiKey = '34299631-aae41d7fe9141a19065e058da';
+async function onLoadMore() {
+  await onRequest();
+}
 
-  const params = {
-    key: `${apiKey}`,
-    q: term,
-    image_type: 'photo',
-    orientation: 'horizontal',
-    safesearch: 'true',
-    page: page,
-    per_page: 40,
-  };
+function onSuccess(images) {
+  refs.gallery.insertAdjacentHTML('beforeend', createImages(images));
 
+  lightbox.refresh();
+
+  refs.loadMoreBtn.classList.remove('is-hidden');
+  if (images.length < 40) {
+    refs.loadMoreBtn.classList.add('is-hidden');
+  }
+}
+
+const lightbox = new SimpleLightbox('.gallery__item', {
+  captionsData: 'alt',
+  captionDelay: 250,
+});
+
+function createImages(images) {
+  const markup = images
+    .map(
+      ({ largeImageURL, webformatURL, likes, views, comments, downloads }) => {
+        return `
+  
+    <div>
+   <a class="gallery__item" href="${largeImageURL}">
+    <img src="${webformatURL}" alt="image" loading="lazy" />
+    <div class="info">
+      <p class="info-item">
+        <b><span class="icon">&#10084;</span>${likes}</b>
+      </p>
+      <p class="info-item">
+        <b><span class="icon">&#128065;</span>${views}</b>
+      </p>
+      <p class="info-item">
+        <b><span class="icon">	
+        &#128488;</span>${comments}</b>
+      </p>
+      <p class="info-item">
+        <b><span class="icon">&#8595;</span>${downloads}</b>
+      </p>
+    </div>
+  </div></a>
+    `;
+      }
+    )
+    .join('');
+
+  return markup;
+}
+
+async function onSearchRequest() {
   try {
-    const response = await axios.get(BASE_URL, { params });
-
-    notifications(response.data.hits.length, response.data.total);
-
-    markupImages(response.data);
+    const fetch = await newApiService.fetchImages();
+    const totalHits = await fetch.totalHits;
+    onSuccess(fetch.hits);
+    if (totalHits === 0) {
+      Notiflix.Notify.failure(
+        `Sorry, there are no images matching your search query. Please try again.`
+      );
+    }
+    if (totalHits) {
+      Notiflix.Notify.success(`Hooray! We found ${totalHits} images.`);
+    }
+    console.log(fetch.totalHits);
   } catch (error) {
     console.log(error);
   }
 }
 
-function markupImages(items) {
-  const markup = items.hits
-    .map(
-      item =>
-        `<a class="photo-link" href="${item.largeImageURL}">
-            <div class="photo-card">
-            <div class="photo">
-            <img src="${item.webformatURL}" alt="${item.tags}" loading="lazy"/>
-            </div>
-                    <div class="info">
-                        <p class="info-item">
-                            <b>Likes</b>
-                            ${item.likes}
-                        </p>
-                        <p class="info-item">
-                            <b>Views</b>
-                            ${item.views}
-                        </p>
-                        <p class="info-item">
-                            <b>Comments</b>
-                            ${item.comments}
-                        </p>
-                        <p class="info-item">
-                            <b>Downloads</b>
-                            ${item.downloads}
-                        </p>
-                    </div>
-            </div>
-        </a>`
-    )
-    .join('');
-  refs.gallery.insertAdjacentHTML('beforeend', markup);
-  simpleLightBox.refresh();
-}
-
-function notifications(length, totalHits) {
-  if (length === 0) {
-    Notiflix.Notify.failure(
-      'Sorry, there are no images matching your search query. Please try again.'
-    );
-    return;
-  }
-
-  if (page === 1) {
-    refs.loadMoreBtn.style.display = 'flex';
-    Notiflix.Notify.success(`Hooray! We found ${totalHits} images.`);
-  }
-
-  if (length < 40) {
-    refs.loadMoreBtn.style.display = 'none';
-
-    Notiflix.Notify.info(
-      "We're sorry, but you've reached the end of search results."
-    );
+async function onRequest() {
+  try {
+    const fetch = await newApiService.fetchImages();
+    const pageData = await fetch.totalHits;
+    const numberOfPages = Math.ceil(pageData / 40);
+    if (numberOfPages < newApiService.page) {
+      Notiflix.Notify.warning(
+        "We're sorry, but you've reached the end of search results."
+      );
+      refs.loadMoreBtn.classList.add('is-hidden');
+    }
+    onSuccess(fetch.hits);
+  } catch (error) {
+    console.log(error);
   }
 }
 
-const simpleLightBox = new SimpleLightbox('.gallery a', {
-  captionsData: 'alt',
-  captionDelay: 250,
-});
+function clearMarkup() {
+  refs.gallery.innerHTML = '';
+  refs.loadMoreBtn.classList.add('is-hidden');
+}
