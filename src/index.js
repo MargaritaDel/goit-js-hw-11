@@ -140,7 +140,6 @@ async function onSearchReq() {
     const fetch = await newApiService.fetchImages();
     const totalHits = await fetch.totalHits;
     onSuccess(fetch.hits);
-    newApiService.incrementPage();
 
     if (totalHits) {
       Notiflix.Notify.success(`Hooray! We found ${totalHits} images.`);
