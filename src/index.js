@@ -89,6 +89,12 @@ function onSuccess(images) {
   if (images.length < 40) {
     refs.loadMoreBtn.classList.add('is-hidden');
   }
+  if (images.length < 39 && images.length > 0) {
+    Notiflix.Notify.warning(
+      "We're sorry, but you've reached the end of search results."
+    );
+    refs.loadMoreBtn.classList.add('is-hidden');
+  }
 }
 
 function createImages(images) {
@@ -142,6 +148,11 @@ async function onSearchReq() {
       Notiflix.Notify.failure(
         'Sorry, there are no images matching your search query. Please try again.'
       );
+    } else if (totalHits < 39 && totalHits > 0) {
+      Notiflix.Notify.warning(
+        "We're sorry, but you've reached the end of search results."
+      );
+      refs.loadMoreBtn.classList.add('is-hidden');
     }
   } catch (error) {
     console.log(error);
