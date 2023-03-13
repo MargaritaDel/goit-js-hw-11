@@ -82,7 +82,7 @@ async function onLoadMore() {
 }
 
 function onSuccess(images) {
-  refs.gallery.insertAdjacentHTML('beforeend', markupImage(images));
+  refs.gallery.insertAdjacentHTML('beforeend', createImages(images));
   lightbox.refresh();
 
   refs.loadMoreBtn.classList.remove('is-hidden');
@@ -91,7 +91,7 @@ function onSuccess(images) {
   }
 }
 
-function markupImage(images) {
+function createImages(images) {
   const markup = images
     .map(
       ({ largeImageURL, webformatURL, likes, views, comments, downloads }) => {
