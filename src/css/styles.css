@@ -5,28 +5,32 @@
 
 
 .gallery {
-  margin-left: -20px;
-  padding-top: 60px;
-  width: 100%;
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
   justify-content: center;
-  align-items: center;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 30px;
+  padding: 20px 0;
+  margin-bottom: 20px;
 }
 
 img {
-  flex-flow: column;
+  display: block;
   width: 100%;
-  height: 250px;
-  object-fit: cover;
+  height: 100%;
+  border-radius: 10px;
 }
 
+.photo-card {
+  display: inline-block;
+  width: 350px;
+  border: 1px solid black;
+  border-radius: 10px;
+  background-color: cornsilk;
+}
 
 .photo {
-  object-fit: cover;
-  max-width: 100%;
+  min-width: 350px;
+  height: 250px;
 }
 
 .info {
