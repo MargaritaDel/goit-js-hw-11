@@ -14,6 +14,11 @@ refs.loadMoreBtn.addEventListener('click', onLoadMore);
 refs.loadMoreBtn.classList.add('is-hidden');
 refs.searchForm.addEventListener('submit', onSearch);
 
+const lightbox = new SimpleLightbox('.gallery__item', {
+  captionsData: 'alt',
+  captionDelay: 250,
+});
+
 class NewApiService {
   constructor() {
     this.searchQuery = '';
@@ -26,21 +31,21 @@ class NewApiService {
     const params = {
       key: `${apiKey}`,
       q: `${this.searchQuery}`,
-      page: `${this.page}`,
-      per_page: '40',
       image_type: 'photo',
       orientation: 'horizontal',
       safesearch: 'true',
+      per_page: '40',
+      page: `${this.page}`,
     };
 
-    const api = await axios.get(BASE_URL, { params });
-    const data = await api.data;
-    this.incrementPage();
-    return data;
+    const request = await axios.get(BASE_URL, { params });
+    const datas = await request.data;
+
+    return datas;
   }
 
   incrementPage() {
-    this.page + 1;
+    this.page += 1;
     console.log(this.page);
   }
   resetIncrementPage() {
@@ -58,27 +63,26 @@ class NewApiService {
 const newApiService = new NewApiService();
 
 async function onSearch(e) {
-  clearMarkup();
+  clear();
   e.preventDefault();
+
   newApiService.query = e.currentTarget.elements.searchQuery.value.trim();
   if (newApiService.searchQuery === '') {
     Notiflix.Notify.failure(
       'Sorry, there are no images matching your search query. Please try again.'
     );
-    return clearMarkup();
+    return clear();
   }
-  await onSearchRequest();
-
   newApiService.resetIncrementPage();
+  await onSearchReq();
 }
 
 async function onLoadMore() {
-  await onRequest();
+  await onLoadMoreReq();
 }
 
 function onSuccess(images) {
-  refs.gallery.insertAdjacentHTML('beforeend', createImages(images));
-
+  refs.gallery.insertAdjacentHTML('beforeend', markupImage(images));
   lightbox.refresh();
 
   refs.loadMoreBtn.classList.remove('is-hidden');
@@ -87,18 +91,13 @@ function onSuccess(images) {
   }
 }
 
-const lightbox = new SimpleLightbox('.gallery__item', {
-  captionsData: 'alt',
-  captionDelay: 250,
-});
-
-function createImages(images) {
+function markupImage(images) {
   const markup = images
     .map(
       ({ largeImageURL, webformatURL, likes, views, comments, downloads }) => {
         return `
   
-    <div>
+    <div class="photo-card">
    <a class="gallery__item" href="${largeImageURL}">
     <img src="${webformatURL}" alt="image" loading="lazy" />
     <div class="info">
@@ -125,30 +124,36 @@ function createImages(images) {
   return markup;
 }
 
-async function onSearchRequest() {
+function clear() {
+  refs.gallery.innerHTML = '';
+  refs.loadMoreBtn.classList.add('is-hidden');
+}
+
+async function onSearchReq() {
   try {
     const fetch = await newApiService.fetchImages();
     const totalHits = await fetch.totalHits;
     onSuccess(fetch.hits);
-    if (totalHits === 0) {
-      Notiflix.Notify.failure(
-        `Sorry, there are no images matching your search query. Please try again.`
-      );
-    }
+    newApiService.incrementPage();
+
     if (totalHits) {
       Notiflix.Notify.success(`Hooray! We found ${totalHits} images.`);
+    } else if (totalHits === 0) {
+      Notiflix.Notify.failure(
+        'Sorry, there are no images matching your search query. Please try again.'
+      );
     }
-    console.log(fetch.totalHits);
   } catch (error) {
     console.log(error);
   }
 }
 
-async function onRequest() {
+async function onLoadMoreReq() {
+  newApiService.incrementPage();
   try {
     const fetch = await newApiService.fetchImages();
-    const pageData = await fetch.totalHits;
-    const numberOfPages = Math.ceil(pageData / 40);
+    const totalHits = await fetch.totalHits;
+    const numberOfPages = Math.ceil(totalHits / 40);
     if (numberOfPages < newApiService.page) {
       Notiflix.Notify.warning(
         "We're sorry, but you've reached the end of search results."
@@ -159,9 +164,4 @@ async function onRequest() {
   } catch (error) {
     console.log(error);
   }
-}
-
-function clearMarkup() {
-  refs.gallery.innerHTML = '';
-  refs.loadMoreBtn.classList.add('is-hidden');
 }
